@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a basic FIFO Queue
+
+Parameters:
+  QueueName:
+    Type: String
+    Description: Enter the queue name, note that FIFO queues must end with .fifo
+    AllowedPattern: ^.+\.fifo$
+  KmsMasterKeyId:
+    Type: String
+    Description: Enter the KMS master key ARN used for SSE
+    AllowedPattern: ^.+$
+
+Resources:
+  BasicQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      ContentBasedDeduplication: false
+      DelaySeconds: 0
+      FifoQueue: true
+      KmsMasterKeyId:
+        Ref: KmsMasterKeyId
+      KmsDataKeyReusePeriodSeconds: 300
+      MaximumMessageSize: 262144
+      MessageRetentionPeriod: 86400
+      QueueName:
+        Ref: QueueName
+      VisibilityTimeout: 30

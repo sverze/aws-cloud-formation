@@ -1,0 +1,104 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a FIFO SSE Queue with Cloud Watch alarms for queue depth
+
+Parameters:
+  QueueName:
+    Type: String
+    Description: Enter the queue name, note that FIFO queues must end with .fifo
+    AllowedPattern: ^.+\.fifo$
+
+  KmsMasterKeyId:
+    Type: String
+    Description: Enter the KMS master key ARN used for SSE
+    AllowedPattern: ^.+$
+
+  DeadLetterQueueEnabled:
+    Type: String
+    Description: Enable dead letter queue redrive policy
+    Default: false
+    AllowedValues:
+      - true
+      - false
+
+  QueueDepthThreshold:
+    Type: Number
+    Description: Enter the max queue depth threshold before a cloud watch alarm is triggered
+    MinValue: 1
+    MaxValue: 1000
+    Default: 3
+
+Resources:
+  SourceQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      ContentBasedDeduplication: false
+      DelaySeconds: 0
+      FifoQueue: true
+      KmsMasterKeyId:
+        Ref: KmsMasterKeyId
+      KmsDataKeyReusePeriodSeconds: 300
+      MaximumMessageSize: 262144
+      MessageRetentionPeriod: 86400
+      QueueName:
+        Ref: QueueName
+      VisibilityTimeout: 30
+      RedrivePolicy:
+        deadLetterTargetArn:
+          Fn::GetAtt:
+            - DeadLetterQueue
+            - Arn
+        maxReceiveCount: 5
+
+  DeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      MessageRetentionPeriod: 86400
+      KmsMasterKeyId:
+        Ref: KmsMasterKeyId
+
+  QueueDepthAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Alarm if queue depth grows beyond 3 messages
+      Namespace: AWS/SQS
+      MetricName: ApproximateNumberOfMessagesVisible
+      Dimensions:
+        -
+          Name: QueueName
+          Value:
+            Fn::GetAtt:
+              - SourceQueue
+              - QueueName
+      Statistic: Sum
+      Period: 300
+      EvaluationPeriods: 1
+      Threshold:
+        Ref: QueueDepthThreshold
+      ComparisonOperator: GreaterThanThreshold
+
+
+Outputs:
+  SourceQueueURL:
+    Description: URL of the source queue
+    Value:
+      Ref: SourceQueue
+
+  SourceQueueARN:
+    Description: ARN of the source queue
+    Value:
+      Fn::GetAtt:
+        - SourceQueue
+        - Arn
+
+  DeadLetterQueueURL:
+    Description: URL of the dead letter queue
+    Value:
+      Ref: DeadLetterQueue
+
+  DeadLetterQueueARN:
+    Description: ARN of the dead letter queue
+    Value:
+      Fn::GetAtt:
+        - DeadLetterQueue
+        - Arn
