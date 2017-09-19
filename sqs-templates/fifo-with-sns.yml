@@ -1,48 +1,57 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Creates a FIFO SSE Queue with Cloud Watch alarms for queue depth
+Description: Creates an SSE Queue with Cloud Watch alarms
 
 Parameters:
   QueueName:
     Type: String
-    Description: Enter the queue name, note that FIFO queues must end with .fifo
-    AllowedPattern: ^.+\.fifo$
+    Description: Enter the queue name. Note that FIFO queues must end with .fifo
 
   KmsMasterKeyId:
     Type: String
     Description: Enter the KMS master key ARN used for SSE
     AllowedPattern: ^.+$
 
-  DeadLetterQueueEnabled:
+  FifoQueueEnabled:
     Type: String
-    Description: Enable dead letter queue redrive policy
+    Description: Enable queue FIFO characteristics
     Default: false
     AllowedValues:
       - true
       - false
 
-  QueueDepthThreshold:
+  MessageRetentionPeriod:
+    Type: Number
+    Description: Enter the period in seconds that the message is retained
+    MinValue: 60
+    MaxValue: 345600
+    Default: 86400
+
+  AlarmTopicName:
+    Type: String
+    Description: Enter the queue name. Note that FIFO queues must end with .fifo
+
+  QueueDepthAlarmThreshold:
     Type: Number
     Description: Enter the max queue depth threshold before a cloud watch alarm is triggered
     MinValue: 1
-    MaxValue: 1000
-    Default: 3
+    MaxValue: 20000
+    Default: 10
 
-  AlarmEmail:
-    Default: nobody@somewhere.com
-    Description: Email address to notify if operational problems arise
-    Type: String
+Conditions:
+  UseFifoQueue: !Equals [!Ref FifoQueueEnabled, true]
 
 Resources:
   SourceQueue:
     Type: AWS::SQS::Queue
     Properties:
-      ContentBasedDeduplication: false
+      ContentBasedDeduplication: !If [UseFifoQueue, true, !Ref "AWS::NoValue"]
       DelaySeconds: 0
-      FifoQueue: true
+      FifoQueue: !If [UseFifoQueue, true, !Ref "AWS::NoValue"]
       KmsMasterKeyId:
         Ref: KmsMasterKeyId
       KmsDataKeyReusePeriodSeconds: 300
-      MaximumMessageSize: 262144
+      MessageRetentionPeriod:
+        Ref: MessageRetentionPeriod
       MessageRetentionPeriod: 86400
       QueueName:
         Ref: QueueName
@@ -57,10 +66,12 @@ Resources:
   DeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
-      FifoQueue: true
-      MessageRetentionPeriod: 86400
+      FifoQueue: !If [UseFifoQueue, true, !Ref "AWS::NoValue"]
+      MessageRetentionPeriod:
+        Ref: MessageRetentionPeriod
       KmsMasterKeyId:
         Ref: KmsMasterKeyId
+
 
   QueueDepthAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -69,6 +80,7 @@ Resources:
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
+        -
           Name: QueueName
           Value:
             Fn::GetAtt:
@@ -78,21 +90,20 @@ Resources:
       Period: 300
       EvaluationPeriods: 1
       Threshold:
-        Ref: QueueDepthThreshold
+        Ref: QueueDepthAlarmThreshold
       ComparisonOperator: GreaterThanThreshold
       AlarmActions:
-          Ref: "AlarmTopic"
+        -
+          Ref: AlarmTopic
       InsufficientDataActions:
-          Ref: "AlarmTopic"
+        -
+          Ref: AlarmTopic
 
   AlarmTopic:
     Type: "AWS::SNS::Topic"
     Properties:
-      Subscription:
-          Endpoint:
-            Ref: "AlarmEmail"
-          Protocol: "email"
-
+      TopicName:
+        Ref: AlarmTopicName
 
 Outputs:
   SourceQueueURL:

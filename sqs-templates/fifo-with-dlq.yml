@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Creates a FIFO SSE Queue with Cloud Watch alarms for queue depth
+Description: Creates an SSE Queue with Cloud Watch alarms
 
 Parameters:
   QueueName:
@@ -19,26 +19,36 @@ Parameters:
       - true
       - false
 
-  QueueDepthThreshold:
+  MessageRetentionPeriod:
+    Type: Number
+    Description: Enter the period in seconds that the message is retained
+    MinValue: 60
+    MaxValue: 345600
+    Default: 86400
+
+  QueueDepthAlarmThreshold:
     Type: Number
     Description: Enter the max queue depth threshold before a cloud watch alarm is triggered
     MinValue: 1
-    MaxValue: 1000
-    Default: 3
+    MaxValue: 20000
+    Default: 10
+
+Conditions:
+  UseFifoQueue: !Equals [!Ref FifoQueueEnabled, true]
 
 Resources:
   SourceQueue:
     Type: AWS::SQS::Queue
     Properties:
-      ContentBasedDeduplication: false
+      ContentBasedDeduplication: !If [UseFifoQueue, true, !Ref "AWS::NoValue"]
       DelaySeconds: 0
-      FifoQueue:
-        Ref: FifoQueueEnabled
+      FifoQueue: !If [UseFifoQueue, true, !Ref "AWS::NoValue"]
       KmsMasterKeyId:
         Ref: KmsMasterKeyId
       KmsDataKeyReusePeriodSeconds: 300
       MaximumMessageSize: 262144
-      MessageRetentionPeriod: 86400
+      MessageRetentionPeriod:
+        Ref: MessageRetentionPeriod
       QueueName:
         Ref: QueueName
       VisibilityTimeout: 30
@@ -52,11 +62,12 @@ Resources:
   DeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
-      FifoQueue:
-        Ref: FifoQueueEnabled
-      MessageRetentionPeriod: 86400
+      FifoQueue: !If [UseFifoQueue, true, !Ref "AWS::NoValue"]
+      MessageRetentionPeriod:
+        Ref: MessageRetentionPeriod
       KmsMasterKeyId:
         Ref: KmsMasterKeyId
+
 
   QueueDepthAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -75,7 +86,7 @@ Resources:
       Period: 300
       EvaluationPeriods: 1
       Threshold:
-        Ref: QueueDepthThreshold
+        Ref: QueueDepthAlarmThreshold
       ComparisonOperator: GreaterThanThreshold
 
 Outputs:
