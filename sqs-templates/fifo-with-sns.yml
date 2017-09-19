@@ -4,16 +4,17 @@ Description: Creates a FIFO SSE Queue with Cloud Watch alarms for queue depth
 Parameters:
   QueueName:
     Type: String
-    Description: Enter the queue name. Note that FIFO queues must end with .fifo
+    Description: Enter the queue name, note that FIFO queues must end with .fifo
+    AllowedPattern: ^.+\.fifo$
 
   KmsMasterKeyId:
     Type: String
     Description: Enter the KMS master key ARN used for SSE
     AllowedPattern: ^.+$
 
-  FifoQueueEnabled:
+  DeadLetterQueueEnabled:
     Type: String
-    Description: Enable queue FIFO characteristics
+    Description: Enable dead letter queue redrive policy
     Default: false
     AllowedValues:
       - true
@@ -26,14 +27,18 @@ Parameters:
     MaxValue: 1000
     Default: 3
 
+  AlarmEmail:
+    Default: nobody@somewhere.com
+    Description: Email address to notify if operational problems arise
+    Type: String
+
 Resources:
   SourceQueue:
     Type: AWS::SQS::Queue
     Properties:
       ContentBasedDeduplication: false
       DelaySeconds: 0
-      FifoQueue:
-        Ref: FifoQueueEnabled
+      FifoQueue: true
       KmsMasterKeyId:
         Ref: KmsMasterKeyId
       KmsDataKeyReusePeriodSeconds: 300
@@ -52,8 +57,7 @@ Resources:
   DeadLetterQueue:
     Type: AWS::SQS::Queue
     Properties:
-      FifoQueue:
-        Ref: FifoQueueEnabled
+      FifoQueue: true
       MessageRetentionPeriod: 86400
       KmsMasterKeyId:
         Ref: KmsMasterKeyId
@@ -65,7 +69,6 @@ Resources:
       Namespace: AWS/SQS
       MetricName: ApproximateNumberOfMessagesVisible
       Dimensions:
-        -
           Name: QueueName
           Value:
             Fn::GetAtt:
@@ -77,6 +80,19 @@ Resources:
       Threshold:
         Ref: QueueDepthThreshold
       ComparisonOperator: GreaterThanThreshold
+      AlarmActions:
+          Ref: "AlarmTopic"
+      InsufficientDataActions:
+          Ref: "AlarmTopic"
+
+  AlarmTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      Subscription:
+          Endpoint:
+            Ref: "AlarmEmail"
+          Protocol: "email"
+
 
 Outputs:
   SourceQueueURL:
