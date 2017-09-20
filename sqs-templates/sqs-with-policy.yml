@@ -6,9 +6,17 @@ Parameters:
     Type: String
     Description: Enter the queue name. Note that FIFO queues must end with .fifo
 
-  QueueWriteRoleArn:
-    Type: String
-    Description: Enter the ARN of the queue write role(s)
+  QueueRoleWriteArn:
+    Type: CommaDelimitedList
+    Description: Enter the ARN's for the queue write roles
+
+  QueueRoleReadArn:
+    Type: CommaDelimitedList
+    Description: Enter the ARN's for the queue read roles
+
+  QueueRoleAdminArn:
+    Type: CommaDelimitedList
+    Description: Enter the ARN's for the queue administrator roles
 
   KmsMasterKeyId:
     Type: String
@@ -75,21 +83,58 @@ Resources:
   QueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
+      Queues:
+        - Ref: Queue
       PolicyDocument:
+        Version: 2012-10-17
         Id: QueuePolicy
         Statement:
           - Sid: QueueWriteAccess
-            Effect: Allowed
-            Principal:
-              AWS:
-              - Ref: QueueWriteRoleArn
-            Action:
-              - sqs:SendMessage
-              - sqs:ReceiveMessage
+            Effect: Allow
             Resource:
               Fn::GetAtt:
                 - Queue
                 - Arn
+            Action:
+              - sqs:SendMessage
+              - sqs:DeleteMessage
+              - sqs:ListQueues
+              - sqs:PurgeQueue
+              - sqs:GetQueueUrl
+              - sqs:GetQueueAttributes
+            Principal:
+              AWS:
+                Ref: QueueRoleWriteArn
+          - Sid: QueueReadAccess
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - Queue
+                - Arn
+            Action:
+              - sqs:ReceiveMessage
+              - sqs:DeleteMessage
+              - sqs:ListQueues
+              - sqs:PurgeQueue
+              - sqs:GetQueueUrl
+              - sqs:GetQueueAttributes
+            Principal:
+              AWS:
+                Ref: QueueRoleReadArn
+          - Sid: QueueAdminAccess
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - Queue
+                - Arn
+            Action:
+              - sqs:DeleteQueue
+              - sqs:AddPermission
+              - sqs:RemovePermission
+              - sqs:SetQueueAttributes
+            Principal:
+              AWS:
+                Ref: QueueRoleAdminArn
 
   QueueDepthAlarm:
     Type: AWS::CloudWatch::Alarm
