@@ -1,181 +1,181 @@
-AWSTemplateFormatVersion: 2010-09-09
-Description: Creates an SSE Queue with Cloud Watch alarms
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Creates an SSE Queue with Cloud Watch alarms"
 
 Parameters:
   QueueName:
-    Type: String
-    Description: Enter the queue name. Note that FIFO queues must end with .fifo
+    Type: "String"
+    Description: "Enter the queue name. Note that FIFO queues must end with .fifo"
 
   QueueRoleWriteArn:
-    Type: CommaDelimitedList
-    Description: Enter the ARN's for the queue write roles
+    Type: "CommaDelimitedList"
+    Description: "Enter the ARN's for the queue write roles"
 
   QueueRoleReadArn:
-    Type: CommaDelimitedList
-    Description: Enter the ARN's for the queue read roles
+    Type: "CommaDelimitedList"
+    Description: "Enter the ARN's for the queue read roles"
 
   QueueRoleAdminArn:
-    Type: CommaDelimitedList
-    Description: Enter the ARN's for the queue administrator roles
+    Type: "CommaDelimitedList"
+    Description: "Enter the ARN's for the queue administrator roles"
 
   KmsMasterKeyId:
-    Type: String
-    Description: Enter the KMS master key ARN used for SSE
-    AllowedPattern: ^.+$
+    Type: "String"
+    Description: "Enter the KMS master key ARN used for SSE"
+    AllowedPattern: "^.+$"
 
   FifoQueueEnabled:
-    Type: String
-    Description: Enable queue FIFO characteristics
-    Default: false
+    Type: "String"
+    Description: "Enable queue FIFO characteristics"
+    Default: "false"
     AllowedValues:
-      - true
-      - false
+      - "true"
+      - "false"
 
   MessageRetentionPeriod:
-    Type: Number
-    Description: Enter the period in seconds that the message is retained
-    MinValue: 60
-    MaxValue: 345600
-    Default: 86400
+    Type: "Number"
+    Description: "Enter the period in seconds that the message is retained"
+    MinValue: "60"
+    MaxValue: "345600"
+    Default: "86400"
 
   QueueDepthAlarmThreshold:
-    Type: Number
-    Description: Enter the max queue depth threshold before a cloud watch alarm is triggered
-    MinValue: 1
-    MaxValue: 20000
-    Default: 10
+    Type: "Number"
+    Description: "Enter the max queue depth threshold before a cloud watch alarm is triggered"
+    MinValue: "1"
+    MaxValue: "20000"
+    Default: "10"
 
 Conditions:
   UseFifoQueue: !Equals [!Ref FifoQueueEnabled, true]
 
 Resources:
   Queue:
-    Type: AWS::SQS::Queue
+    Type: "AWS::SQS::Queue"
     Properties:
       ContentBasedDeduplication: !If [UseFifoQueue, true, !Ref "AWS::NoValue"]
-      DelaySeconds: 0
+      DelaySeconds: "0"
       FifoQueue: !If [UseFifoQueue, true, !Ref "AWS::NoValue"]
       KmsMasterKeyId:
-        Ref: KmsMasterKeyId
-      KmsDataKeyReusePeriodSeconds: 300
+        Ref: "KmsMasterKeyId"
+      KmsDataKeyReusePeriodSeconds: "300"
       MessageRetentionPeriod:
-        Ref: MessageRetentionPeriod
-      MessageRetentionPeriod: 86400
+        Ref: "MessageRetentionPeriod"
+      MessageRetentionPeriod: "86400"
       QueueName:
-        Ref: QueueName
-      VisibilityTimeout: 30
+        Ref: "QueueName"
+      VisibilityTimeout: "30"
       RedrivePolicy:
         deadLetterTargetArn:
           Fn::GetAtt:
-            - DeadLetterQueue
-            - Arn
-        maxReceiveCount: 5
+            - "DeadLetterQueue"
+            - "Arn"
+        maxReceiveCount: "5"
 
   DeadLetterQueue:
-    Type: AWS::SQS::Queue
+    Type: "AWS::SQS::Queue"
     Properties:
       FifoQueue: !If [UseFifoQueue, true, !Ref "AWS::NoValue"]
       MessageRetentionPeriod:
-        Ref: MessageRetentionPeriod
+        Ref: "MessageRetentionPeriod"
       KmsMasterKeyId:
-        Ref: KmsMasterKeyId
+        Ref: "KmsMasterKeyId"
 
   QueuePolicy:
-    Type: AWS::SQS::QueuePolicy
+    Type: "AWS::SQS::QueuePolicy"
     Properties:
       Queues:
-        - Ref: Queue
+        - Ref: "Queue"
       PolicyDocument:
-        Version: 2012-10-17
-        Id: QueuePolicy
+        Version: "2012-10-17"
+        Id: "QueuePolicy"
         Statement:
-          - Sid: QueueWriteAccess
-            Effect: Allow
+          - Sid: "QueueWriteAccess"
+            Effect: "Allow"
             Resource:
               Fn::GetAtt:
-                - Queue
-                - Arn
+                - "Queue"
+                - "Arn"
             Action:
-              - sqs:SendMessage
-              - sqs:DeleteMessage
-              - sqs:ListQueues
-              - sqs:PurgeQueue
-              - sqs:GetQueueUrl
-              - sqs:GetQueueAttributes
+              - "sqs:SendMessage"
+              - "sqs:DeleteMessage"
+              - "sqs:ListQueues"
+              - "sqs:PurgeQueue"
+              - "sqs:GetQueueUrl"
+              - "sqs:GetQueueAttributes"
             Principal:
               AWS:
-                Ref: QueueRoleWriteArn
-          - Sid: QueueReadAccess
-            Effect: Allow
+                Ref: "QueueRoleWriteArn"
+          - Sid: "QueueReadAccess"
+            Effect: "Allow"
             Resource:
               Fn::GetAtt:
-                - Queue
-                - Arn
+                - "Queue"
+                - "Arn"
             Action:
-              - sqs:ReceiveMessage
-              - sqs:DeleteMessage
-              - sqs:ListQueues
-              - sqs:PurgeQueue
-              - sqs:GetQueueUrl
-              - sqs:GetQueueAttributes
+              - "sqs:ReceiveMessage"
+              - "sqs:DeleteMessage"
+              - "sqs:ListQueues"
+              - "sqs:PurgeQueue"
+              - "sqs:GetQueueUrl"
+              - "sqs:GetQueueAttributes"
             Principal:
               AWS:
-                Ref: QueueRoleReadArn
-          - Sid: QueueAdminAccess
-            Effect: Allow
+                Ref: "QueueRoleReadArn"
+          - Sid: "QueueAdminAccess"
+            Effect: "Allow"
             Resource:
               Fn::GetAtt:
-                - Queue
-                - Arn
+                - "Queue"
+                - "Arn"
             Action:
-              - sqs:DeleteQueue
-              - sqs:AddPermission
-              - sqs:RemovePermission
-              - sqs:SetQueueAttributes
+              - "sqs:DeleteQueue"
+              - "sqs:AddPermission"
+              - "sqs:RemovePermission"
+              - "sqs:SetQueueAttributes"
             Principal:
               AWS:
-                Ref: QueueRoleAdminArn
+                Ref: "QueueRoleAdminArn"
 
   QueueDepthAlarm:
-    Type: AWS::CloudWatch::Alarm
+    Type: "AWS::CloudWatch::Alarm"
     Properties:
-      AlarmDescription: Alarm if queue depth grows beyond 3 messages
-      Namespace: AWS/SQS
-      MetricName: ApproximateNumberOfMessagesVisible
+      AlarmDescription: "Alarm if queue depth grows beyond 3 messages"
+      Namespace: "AWS/SQS"
+      MetricName: "ApproximateNumberOfMessagesVisible"
       Dimensions:
-        - Name: QueueName
+        - Name: "QueueName"
           Value:
             Fn::GetAtt:
-              - Queue
-              - QueueName
-      Statistic: Sum
-      Period: 300
-      EvaluationPeriods: 1
+              - "Queue"
+              - "QueueName"
+      Statistic: "Sum"
+      Period: "300"
+      EvaluationPeriods: "1"
       Threshold:
-        Ref: QueueDepthAlarmThreshold
-      ComparisonOperator: GreaterThanThreshold
+        Ref: "QueueDepthAlarmThreshold"
+      ComparisonOperator: "GreaterThanThreshold"
 
 Outputs:
-  QueueURL:
-    Description: URL of the source queue
+  QueueUrl:
+    Description: "URL of the source queue"
     Value:
-      Ref: Queue
+      Ref: "Queue"
 
-  QueueARN:
-    Description: ARN of the source queue
+  QueueArn:
+    Description: "ARN of the source queue"
     Value:
       Fn::GetAtt:
-        - Queue
-        - Arn
+        - "Queue"
+        - "Arn"
 
-  DeadLetterQueueURL:
-    Description: URL of the dead letter queue
+  DeadLetterQueueUrl:
+    Description: "URL of the dead letter queue"
     Value:
-      Ref: DeadLetterQueue
+      Ref: "DeadLetterQueue"
 
-  DeadLetterQueueARN:
-    Description: ARN of the dead letter queue
+  DeadLetterQueueArn:
+    Description: "ARN of the dead letter queue"
     Value:
       Fn::GetAtt:
-        - DeadLetterQueue
-        - Arn
+        - "DeadLetterQueue"
+        - "Arn"

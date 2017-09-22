@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  SqsLaunchRole:
+    Type: "AWS::IAM::Role"
+    Description: "Creates a launch role for creating SQS resources including Cloud Watch Alarms"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "cloudformation.amazonaws.com"
+                - "servicecatalog.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/shared/cfn-launch/"
+      Policies:
+        - PolicyName: "sqs-launch-policy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "sqs:CreateQueue"
+                  - "sqs:DeleteQueue"
+                  - "sqs:AddPermission"
+                  - "sqs:RemovePermission"
+                  - "sqs:GetQueueAttributes"
+                  - "sqs:SetQueueAttributes"
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - "cloudwatch:CreateAlarm"
+                  - "cloudwatch:DeleteAlarm"
+                  - "cloudwatch:PutMetricAlarm"
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - "cloudformation:CreateStack"
+                  - "cloudformation:DeleteStack"
+                  - "cloudformation:UpdateStack"
+                  - "cloudformation:SetStackPolicy"
+                  - "cloudformation:DescribeStackEvents"
+                  - "cloudformation:DescribeStacks"
+                  - "cloudformation:DescribeStackResource"
+                  - "cloudformation:DescribeStackResources"
+                  - "cloudformation:GetTemplate"
+                  - "cloudformation:GetTemplateSummary"
+                  - "cloudformation:List*"
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - "servicecatalog:DescribeRecord"
+                  - "servicecatalog:DescribeProduct"
+                  - "servicecatalog:DescribeProductView"
+                  - "servicecatalog:DescribeProvisioningParameters"
+                  - "servicecatalog:ListLaunchPaths"
+                  - "servicecatalog:ListRecordHistory"
+                  - "servicecatalog:ProvisionProduct"
+                  - "servicecatalog:SearchProducts"
+                  - "servicecatalog:ScanProvisionedProducts"
+                  - "servicecatalog:TerminateProvisionedProducts"
+                  - "servicecatalog:UpdateProvisionedProducts"
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - "s3:GetObject"
+                Resource: "*"
+
+Outputs:
+  SqsLaunchRoleArn:
+    Description: "ARN of the SQS launch role"
+    Value:
+      Fn::GetAtt:
+        - "SqsLaunchRole"
+        - "Arn"
