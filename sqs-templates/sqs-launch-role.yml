@@ -22,6 +22,11 @@ Resources:
             Statement:
               - Effect: "Allow"
                 Action:
+                  - "iam:GetRole"
+                  - "iam:PassRole"
+                Resource: "arn:aws:iam:::role/CloudWatch*"
+              - Effect: "Allow"
+                Action:
                   - "sqs:CreateQueue"
                   - "sqs:DeleteQueue"
                   - "sqs:AddPermission"
@@ -32,7 +37,7 @@ Resources:
               - Effect: "Allow"
                 Action:
                   - "cloudwatch:CreateAlarm"
-                  - "cloudwatch:DeleteAlarm"
+                  - "cloudwatch:DeleteAlarms"
                   - "cloudwatch:PutMetricAlarm"
                 Resource: "*"
               - Effect: "Allow"
