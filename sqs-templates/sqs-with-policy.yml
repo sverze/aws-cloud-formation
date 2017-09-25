@@ -5,6 +5,7 @@ Parameters:
   QueueName:
     Type: "String"
     Description: "Enter the queue name. Note that FIFO queues must end with .fifo"
+    AllowedPattern: "^.+$"
 
   QueueRoleWriteArn:
     Type: "CommaDelimitedList"
