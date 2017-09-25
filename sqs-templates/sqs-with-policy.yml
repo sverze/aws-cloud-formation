@@ -4,7 +4,7 @@ Description: "Creates an SSE Queue with Cloud Watch alarms"
 Parameters:
   QueueName:
     Type: "String"
-    Description: "Enter the queue name. Note that FIFO queues must end with .fifo"
+    Description: "Enter the name of the queue, note that there is no need for any extension"
     AllowedPattern: "^.+$"
 
   QueueRoleWriteArn:
@@ -62,8 +62,7 @@ Resources:
       MessageRetentionPeriod:
         Ref: "MessageRetentionPeriod"
       MessageRetentionPeriod: "86400"
-      QueueName:
-        Ref: "QueueName"
+      QueueName: !If [UseFifoQueue, !Join [".", [!Ref "QueueName", "fifo"]], !Ref "QueueName"]
       VisibilityTimeout: "30"
       RedrivePolicy:
         deadLetterTargetArn:

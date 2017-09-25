@@ -1,10 +1,10 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Creates an SSE Queue with Cloud Watch alarms",
+  "Description": "Creates an SSE Queue with Cloud Watch alarms enabled",
   "Parameters": {
     "QueueName": {
       "Type": "String",
-      "Description": "Enter the queue name. Note that FIFO queues must end with .fifo",
+      "Description": "Enter the name of the queue, note that there is no need for any extension",
       "AllowedPattern": "^.+$"
     },
     "QueueRoleWriteArn": {
@@ -51,8 +51,8 @@
   "Conditions": {
     "UseFifoQueue": {
       "Fn::Equals" : [
-        "FifoQueueEnabled",
-        true
+        { "Ref": "FifoQueueEnabled" },
+        "true"
       ]
     }
   },
@@ -64,9 +64,7 @@
           "Fn::If" : [
             "UseFifoQueue",
             true,
-            {
-              "Ref": "AWS::NoValue"
-            }
+            { "Ref": "AWS::NoValue" }
           ]
         },
         "DelaySeconds": "0",
@@ -74,9 +72,7 @@
           "Fn::If" : [
             "UseFifoQueue",
             true,
-            {
-              "Ref": "AWS::NoValue"
-            }
+            { "Ref": "AWS::NoValue" }
           ]
         },
         "KmsMasterKeyId": {
@@ -85,7 +81,19 @@
         "KmsDataKeyReusePeriodSeconds": "300",
         "MessageRetentionPeriod": "86400",
         "QueueName": {
-          "Ref": "QueueName"
+          "Fn::If" : [
+            "UseFifoQueue",
+            {
+              "Fn::Join": [
+                ".",
+                [
+                  { "Ref": "QueueName" },
+                  "fifo"
+                ]
+              ]
+            },
+            { "Ref": "QueueName" }
+          ]
         },
         "VisibilityTimeout": "30",
         "RedrivePolicy": {
@@ -106,9 +114,7 @@
           "Fn::If" : [
             "UseFifoQueue",
             true,
-            {
-              "Ref": "AWS::NoValue"
-            }
+            { "Ref": "AWS::NoValue" }
           ]
         },
         "MessageRetentionPeriod": {
@@ -123,9 +129,7 @@
       "Type": "AWS::SQS::QueuePolicy",
       "Properties": {
         "Queues": [
-          {
-            "Ref": "Queue"
-          }
+          { "Ref": "Queue" }
         ],
         "PolicyDocument": {
           "Version": "2012-10-17",
