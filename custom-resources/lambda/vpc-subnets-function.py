@@ -61,7 +61,7 @@ def lambda_handler(event, context):
         }
 
         try:
-            respone = request.put(responseUrl, data=jsonResponseBody, headers=headers)
+            response = requests.put(responseUrl, data=jsonResponseBody, headers=headers)
             logger.info("CFN response code: %s", response)
         except Exception, e:
             logger.info("CFN request failed with exception: %s", e)
