@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: VPC Subnet Resource Test
+
+Parameters:
+  VpcId:
+    Type: "AWS::EC2::VPC::Id"
+    Description: "VPC Id to retrieve subnets"
+
+Resources:
+  VpcDescribeSubnets:
+    Type: "Custom::VpcDescribeSubnets"
+    Properties:
+      ServiceToken: !Join
+        - ''
+        - - 'arn:aws:lambda:'
+          - !Ref AWS::Region
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':function:vpc-describe-subnets'
+      VpcId:
+        Ref: 'VpcId'
+
+Outputs:
+  Subnets:
+    Value: !GetAtt VpcDescribeSubnets.Subnets
